@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Manager - Database</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #4c5bdb;
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            padding: 0 20px 30px;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            background: #fbbf24;
+            border-radius: 4px;
+        }
+
+        .logo-text {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: -100%;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+
+        .nav-item:hover::before {
+            left: 100%;
+        }
+
+        .nav-item.active {
+            background: rgba(255,255,255,0.15);
+            transform: translateX(8px);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .storage-section {
+            margin-top: auto;
+            padding: 20px;
+        }
+
+        .storage-header {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        .storage-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .storage-fill {
+            width: 25%;
+            height: 100%;
+            background: linear-gradient(45deg, #00d4aa, #00b894);
+            border-radius: 3px;
+            animation: pulse 2s ease-in-out infinite;
+            position: relative;
+        }
+
+        .storage-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .storage-text {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .upgrade-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .upgrade-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .user-section {
+            margin-top: 20px;
+            padding: 15px 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: #ff6b35;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .user-details {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: white;
+            padding: 15px 30px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 50;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .breadcrumb-icon {
+            width: 20px;
+            height: 20px;
+            background: #6b7280;
+            border-radius: 3px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: #f3f4f6;
+            border-radius: 8px;
+            padding: 10px 15px;
+            gap: 10px;
+            width: 300px;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus-within {
+            background: white;
+            box-shadow: 0 0 0 2px rgba(76, 91, 219, 0.2);
+            transform: scale(1.02);
+        }
+
+        .search-box input {
+            border: none;
+            background: none;
+            outline: none;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-right: 150px;
+        }
+
+        .header-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .header-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .create-btn {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .upload-btn {
+            background: #4c5bdb;
+            color: white;
+        }
+
+        .upload-btn:hover {
+            background: #3b4ac7;
+            box-shadow: 0 4px 15px rgba(76, 91, 219, 0.4);
+        }
+
+        .content {
+            flex: 1;
+            padding: 30px;
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 30px;
+        }
+
+        .page-icon {
+            width: 24px;
+            height: 24px;
+            background: #6b7280;
+            border-radius: 3px;
+        }
+
+        .filter-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+
+        .filter-input {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .filter-input:focus {
+            border-color: #4c5bdb;
+            box-shadow: 0 0 0 2px rgba(76, 91, 219, 0.1);
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            background: white;
+            cursor: pointer;
+        }
+
+        .file-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 20px;
+            background: #f9fafb;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+
+        .table-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 20px;
+            padding: 15px 20px;
+            border-bottom: 1px solid #f3f4f6;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .table-row:hover {
+            background: #f9fafb;
+        }
+
+        .table-row:last-child {
+            border-bottom: none;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .file-type {
+            color: #6b7280;
+        }
+
+        .file-date {
+            color: #6b7280;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 4px 12px;
+            border-radius: 4px;
+            border: none;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .edit-btn {
+            background: #10b981;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background: #059669;
+        }
+
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #dc2626;
+        }
+
+        .notification-icons {
+            position: fixed;
+            top: 15px;
+            right: 60px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            /* animation: bounce 4s ease-in-out infinite; */
+        }
+
+        /* .icon-btn:nth-child(2) { animation-delay: 0.5s; }
+        .icon-btn:nth-child(3) { animation-delay: 1s; } */
+
+        .icon-btn:hover {
+            background: #f3f4f6;
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-3px); }
+            60% { transform: translateY(-1px); }
+        }
+
+        .user-icon {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #4c5bdb, #3b4ac7);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(76, 91, 219, 0.3);
+            animation: glow 3s ease-in-out infinite alternate;
+            z-index: 100;
+        }
+
+        .user-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(76, 91, 219, 0.5);
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 2px 8px rgba(76, 91, 219, 0.3); }
+            to { box-shadow: 0 4px 12px rgba(76, 91, 219, 0.5); }
+        }
+
+        .page-content {
+            display: none;
+        }
+
+        .page-content.active {
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            background: #f3f4f6;
+            border-radius: 12px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            <div class="logo-text">File Manager</div>
+        </div>
+
+        <div class="nav-item active" data-page="database">
+            <div class="nav-icon">🗄️</div>
+            <span>Database</span>
+        </div>
+        <div class="nav-item" data-page="users">
+            <div class="nav-icon">👥</div>
+            <span>Users</span>
+        </div>
+        <div class="nav-item" data-page="roles">
+            <div class="nav-icon">⭐</div>
+            <span>Roles</span>
+        </div>
+        <div class="nav-item" data-page="permissions">
+            <div class="nav-icon">📋</div>
+            <span>Permissions</span>
+        </div>
+        <div class="nav-item" data-page="recovery">
+            <div class="nav-icon">🔄</div>
+            <span>Recovery</span>
+        </div>
+        <div class="nav-item" data-page="settings">
+            <div class="nav-icon">⚙️</div>
+            <span>Settings</span>
+        </div>
+
+        <div class="storage-section">
+            <div class="storage-header">Storage</div>
+            <div class="storage-bar">
+                <div class="storage-fill"></div>
+            </div>
+            <div class="storage-text">12.47 GB of 50 GB used</div>
+            <button class="upgrade-btn">Upgrade Storage</button>
+        </div>
+
+        <div class="user-section">
+            <div class="user-info">
+                <div class="user-avatar">AB</div>
+                <div>
+                    <div style="font-weight: 500;">Personal</div>
+                    <div class="user-details">Only you</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <div class="breadcrumb">
+                    <div class="breadcrumb-icon"></div>
+                    <span id="breadcrumb-text">Database</span>
+                </div>
+                <div class="search-box">
+                    <span>🔍</span>
+                    <input type="text" placeholder="Search files, folders" id="global-search">
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="header-btn create-btn">
+                    <span>➕</span>
+                    Create
+                </button>
+                <button class="header-btn upload-btn">
+                    <span>⬆️</span>
+                    Upload
+                </button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Database Page -->
+            <div class="page-content active" id="database-page">
+                <h1 class="page-title">
+                    <div class="page-icon"></div>
+                    Database
+                </h1>
+
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label class="filter-label">File Name</label>
+                        <input type="text" class="filter-input" placeholder="Search Name" id="name-filter">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Type</label>
+                        <select class="filter-select" id="type-filter">
+                            <option value="">All Types</option>
+                            <option value="Document">Document</option>
+                            <option value="Presentation">Presentation</option>
+                            <option value="Spreadsheet">Spreadsheet</option>
+                            <option value="Image">Image</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Uploaded</label>
+                        <input type="date" class="filter-input" id="date-filter">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Actions</label>
+                        <input type="text" class="filter-input" placeholder="Max size (MB)" id="size-filter">
+                    </div>
+                </div>
+
+                <div class="file-table">
+                    <div class="table-header">
+                        <div>File Name</div>
+                        <div>Type</div>
+                        <div>Uploaded</div>
+                        <div>Actions</div>
+                    </div>
+                    <div id="file-list">
+                        <!-- Files will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Page -->
+            <div class="page-content" id="users-page">
+                <h1 class="page-title">
+                    <div class="page-icon"></div>
+                    Users
+                </h1>
+                <div class="empty-state">
+                    <div class="empty-icon">👥</div>
+                    <h3>User Management</h3>
+                    <p>Manage user accounts and permissions</p>
+                </div>
+            </div>
+
+            <!-- Roles Page -->
+            <div class="page-content" id="roles-page">
+                <h1 class="page-title">
+                    <div class="page-icon"></div>
+                    Roles
+                </h1>
+                <div class="empty-state">
+                    <div class="empty-icon">⭐</div>
+                    <h3>Role Management</h3>
+                    <p>Configure user roles and access levels</p>
+                </div>
+            </div>
+
+            <!-- Permissions Page -->
+            <div class="page-content" id="permissions-page">
+                <h1 class="page-title">
+                    <div class="page-icon"></div>
+                    Permissions
+                </h1>
+                <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <h3>Permission Settings</h3>
+                    <p>Control access permissions and security settings</p>
+                </div>
+            </div>
+
+            <!-- Recovery Page -->
+            <div class="page-content" id="recovery-page">
+                <h1 class="page-title">
+                    <div class="page-icon"></div>
+                    Recovery
+                </h1>
+                <div class="empty-state">
+                    <div class="empty-icon">🔄</div>
+                    <h3>Data Recovery</h3>
+                    <p>Recover deleted files and restore backups</p>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div class="page-content" id="settings-page">
+                <h1 class="page-title">
+                    <div class="page-icon"></div>
+                    Settings
+                </h1>
+                <div class="empty-state">
+                    <div class="empty-icon">⚙️</div>
+                    <h3>System Settings</h3>
+                    <p>Configure application preferences and system options</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification-icons">
+        <div class="icon-btn">💬</div>
+        <div class="icon-btn">🔔</div>
+    </div>
+
+    <div class="user-icon">A</div>
+
+    <script>
+        // Sample file data
+        let filesData = [
+            { name: 'report.docx', type: 'Document', uploaded: '2025-06-07', size: 2.3 },
+            { name: 'presentation.pptx', type: 'Presentation', uploaded: '2025-06-06', size: 15.7 },
+            { name: 'budget.xlsx', type: 'Spreadsheet', uploaded: '2025-06-05', size: 1.2 },
+            { name: 'logo.png', type: 'Image', uploaded: '2025-06-04', size: 0.8 },
+            { name: 'manual.pdf', type: 'Document', uploaded: '2025-06-03', size: 5.4 },
+            { name: 'charts.pptx', type: 'Presentation', uploaded: '2025-06-02', size: 12.1 }
+        ];
+
+        let filteredFiles = [...filesData];
+
+        // Navigation functionality
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const page = this.dataset.page;
+                
+                // Update active nav item
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update breadcrumb
+                const text = this.textContent.trim();
+                document.getElementById('breadcrumb-text').textContent = text;
+                
+                // Show/hide pages
+                document.querySelectorAll('.page-content').forEach(pageContent => {
+                    pageContent.classList.remove('active');
+                });
+                document.getElementById(`${page}-page`).classList.add('active');
+            });
+        });
+
+        // Render files
+        function renderFiles(files) {
+            const fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+            
+            files.forEach((file, index) => {
+                const row = document.createElement('div');
+                row.className = 'table-row';
+                row.innerHTML = `
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-type">${file.type}</div>
+                    <div class="file-date">${file.uploaded}</div>
+                    <div class="file-actions">
+                        <button class="action-btn edit-btn" onclick="editFile(${index})">Edit</button>
+                        <button class="action-btn delete-btn" onclick="deleteFile(${index})">Delete</button>
+                    </div>
+                `;
+                fileList.appendChild(row);
+            });
+        }
+
+        // Filter functionality
+        function applyFilters() {
+            const nameFilter = document.getElementById('name-filter').value.toLowerCase();
+            const typeFilter = document.getElementById('type-filter').value;
+            const dateFilter = document.getElementById('date-filter').value;
+            const sizeFilter = parseFloat(document.getElementById('size-filter').value) || 0;
+
+            filteredFiles = filesData.filter(file => {
+                const matchesName = !nameFilter || file.name.toLowerCase().includes(nameFilter);
+                const matchesType = !typeFilter || file.type === typeFilter;
+                const matchesDate = !dateFilter || file.uploaded === dateFilter;
+                const matchesSize = !sizeFilter || file.size <= sizeFilter;
+                
+                return matchesName && matchesType && matchesDate && matchesSize;
+            });
+
+            renderFiles(filteredFiles);
+        }
+
+        // Add event listeners for filters
+        document.getElementById('name-filter').addEventListener('input', applyFilters);
+        document.getElementById('type-filter').addEventListener('change', applyFilters);
+        document.getElementById('date-filter').addEventListener('change', applyFilters);
+        document.getElementById('size-filter').addEventListener('input', applyFilters);
+
+        // File actions
+        function editFile(index) {
+            const file = filteredFiles[index];
+            showNotification(`Editing ${file.name}`);
+            // Add edit functionality here
+        }
+
+        function deleteFile(index) {
+            const file = filteredFiles[index];
+            if (confirm(`Are you sure you want to delete ${file.name}?`)) {
+                // Find and remove from original array
+                const originalIndex = filesData.findIndex(f => f.name === file.name);
+                if (originalIndex > -1) {
+                    filesData.splice(originalIndex, 1);
+                }
+                applyFilters();
+                showNotification(`${file.name} deleted successfully`);
+            }
+        }
+
+        // Global search
+        document.getElementById('global-search').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            if (!searchTerm) {
+                applyFilters();
+                return;
+            }
+            
+            filteredFiles = filesData.filter(file => 
+                file.name.toLowerCase().includes(searchTerm) ||
+                file.type.toLowerCase().includes(searchTerm)
+            );
+            renderFiles(filteredFiles);
+        });
+
+        // Create and Upload buttons
+        document.querySelector('.create-btn').addEventListener('click', function() {
+            showNotification('Create new file dialog opened');
+        });
+
+        document.querySelector('.upload-btn').addEventListener('click', function() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.accept = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg';
+            
+            input.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    Array.from(this.files).forEach(file => {
+                        const newFile = {
+                            name: file.name,
+                            type: getFileType(file.name),
+                            uploaded: new Date().toISOString().split('T')[0],
+                            size: (file.size / (1024 * 1024)).toFixed(1)
+                        };
+                        filesData.unshift(newFile);
+                    });
+                    applyFilters();
+                    showNotification(`${this.files.length} file(s) uploaded successfully`);
+                }
+            });
+            
+            input.click();
+        });
+
+        // Get file type based on extension
+        function getFileType(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const typeMap = {
+                'pdf': 'Document',
+                'doc': 'Document', 'docx': 'Document',
+                'ppt': 'Presentation', 'pptx': 'Presentation',
+                'xls': 'Spreadsheet', 'xlsx': 'Spreadsheet',
+                'png': 'Image', 'jpg': 'Image', 'jpeg': 'Image'
+            };
+            return typeMap[ext] || 'Document';
+        }
+
+        // Notification system
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: #4c5bdb;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 1000;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.style.transform = 'translateX(0)', 100);
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+
+        // Storage upgrade
+        document.querySelector('.upgrade-btn').addEventListener('click', function() {
+            showNotification('Redirecting to upgrade page...');
+        });
+
+        // Notification icons
+        document.querySelectorAll('.icon-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                showNotification('Notification clicked');
+            });
+        });
+
+        // User avatar
+        document.querySelector('.user-icon').addEventListener('click', function() {
+            showNotification('User menu opened');
+        });
+
+        // Initialize
+        renderFiles(filteredFiles);
+    </script>
+</body>
+</html>
